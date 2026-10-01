@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — TypeScript: `EdgeFlagStore` could abort the process on descending edge ids (#393)
+
+`ensureSlot`'s re-base path (for an edge id below the current base) sized
+its backing array from the *current capacity* and always doubled it, even
+for a shift of 1. Edge ids aren't guaranteed ascending, and a descending
+run of ids each triggers a re-base - ~24 of them reached 512 MB and V8
+hard-aborted the process (`change_in_bytes < kMaxReasonableBytes`), which
+a caller can't catch. Now sizes from the span actually in use (tracked via
+a new `highSlot` high-water mark) and leaves proportional headroom below
+the new id, so a descending run re-bases `O(log n)` times instead of on
+every write and memory stays proportional to the id span. New tests cover
+100,000 descending ids, a single far jump below, and interleaved
+ascending/descending runs cross-checked against a plain `Map`.
+
 ### Fixed — C++: legacy reader ports of two Python fixes (openskp#284, #390, #391)
 
 Two bugs in `legacy.cpp` that Python's `legacy.py` already had fixed
