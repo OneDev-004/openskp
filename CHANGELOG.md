@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed — TypeScript: the legacy (pre-2021) reader no longer holds the whole model's entities until the end
+
+The legacy walk kept every face, loop, edge-use, edge and vertex of the
+model alive until it finished, and only then built each definition's
+geometry. A real 411 MB SketchUp 2020 file held 11.4 million slots (~3.5
+GB of live heap) before the first builder existed, and could not be parsed
+with a 4 GB heap. Each `CComponentDefinition` is now built as its record
+completes, and its entity objects are released right away (their slots
+keep a shared, value-less placeholder so later back-refs still resolve).
+On that file the parse fits in 2.5 GB and runs about three times faster;
+the parsed model and the instanced scene are identical on all 25 real
+files tested.
+
 ### Fixed — Python: `import openskp` no longer fails where `mapbox_earcut` can't be installed (freecad-openskp#3)
 
 `mapbox_earcut` is a compiled dependency, and `_core` imported it at module
