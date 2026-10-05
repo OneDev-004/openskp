@@ -330,6 +330,20 @@ CurrentStyle current_style(const ByteBuffer& catalog) {
   return out;
 }
 
+// The model's current view (FA01 > 34BC); unset without eye and target.
+std::optional<ViewCamera> view_camera(const ByteBuffer& record) {
+  auto raw = parse_camera(record);
+  if (!raw.eye || !raw.target) return std::nullopt;
+  ViewCamera cam;
+  cam.eye = *raw.eye;
+  cam.target = *raw.target;
+  if (raw.up) cam.up = *raw.up;
+  cam.fov = raw.fov;
+  cam.parallel = raw.parallel;
+  cam.ortho_height = raw.ortho_height;
+  return cam;
+}
+
 // VFF model.dat wraps the file's definition list inside container tags
 // F901 -> 7017 -> 7117 -> 7C15. We unwrap this container into individual
 // 7C15 headers upfront so memory is bounded to one definition at a time,
@@ -503,6 +517,10 @@ RawParsed full_parse(const ByteBuffer& data, const ParseOptions& o) {
         continue;
       }
       tag = one[0].tag;
+      // The model's current view: FA01 > 34BC.
+      if (tag == "FA01")
+        for (auto& [t, record] : parse_flat(one[0].payload))
+          if (t == "BC34") p.camera = view_camera(record);
       if (tag == "0602")
         for (auto& [t, catalog] : parse_flat(one[0].payload))
           if (t == "7869") current = current_style(catalog);
