@@ -44,6 +44,17 @@ saying so, instead of the whole package failing to import. `pip install
 openskp` still installs `mapbox_earcut` as before, so normal installs are
 unchanged. Tests block the module in a fresh interpreter to reproduce the real
 import failure, and check the fallback and the warn-once behaviour.
+### Fixed — TypeScript: parsing a large SketchUp 2021+ file no longer builds the whole definitions tree at once
+
+`iterTopLevelLazy` streamed top-level records one at a time, but in real
+files the component definitions are not top-level: they sit under one
+`F901` > `7017` > `7117` chain, which held 100% of a 297 MB model.dat
+(1,203 `7C15` definitions, the largest 0.8 MB). That single record was
+built whole, so parsing a 70 MB `.skp` needed more than 3 GB of heap and
+crashed browser tabs. The three wrapper tags are now passed through, and
+each definition is its own streamed record. No consumer matches those
+tags, so the parsed model and the instanced scene are identical; on that
+file the parse now fits in 1-1.5 GB of heap and runs about twice as fast.
 
 ### Added — C++: the model's saved view and the selected scene
 
